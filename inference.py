@@ -1,19 +1,9 @@
 import os
-from fastapi import FastAPI
-from openai import OpenAI
 from env.environment import SmartEmailTriageEnv, ActionEasy, ActionMedium, ActionHard
-
-app = FastAPI()
-
-# ----------- ENV VARIABLES -----------
 
 API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
 MODEL_NAME = os.getenv("MODEL_NAME", "openai/gpt-oss-120b")
 HF_TOKEN = os.getenv("HF_TOKEN")
-
-client = None
-if HF_TOKEN:
-    client = OpenAI(base_url=API_BASE_URL, api_key=HF_TOKEN)
 
 # ----------- RULE LOGIC -----------
 
@@ -80,22 +70,10 @@ def run_task(task_name, action_cls):
     return {"score": final_score}
 
 
-# ----------- REQUIRED ENDPOINT -----------
 
-@app.post("/reset")
-def reset():
-    return {"status": "ok"}
+# ----------- MAIN ENTRY POINT -----------
 
-
-@app.get("/")
-def root():
-    return {"message": "App running"}
-
-
-# ----------- STARTUP -----------
-
-@app.on_event("startup")
-def startup_event():
+if __name__ == "__main__":
     run_task("easy", ActionEasy)
     run_task("medium", ActionMedium)
     run_task("hard", ActionHard)
