@@ -35,4 +35,8 @@ tasks:
     reward:
       correct: 0.5
       incorrect: -0.25
+<<<<<<< HEAD
       bonus: 0.5
+=======
+      bonus: 0.5
+>>>>>>> 8a62395 (Update project files before pushing to GitHub)

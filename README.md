@@ -1,22 +1,12 @@
----
-title: OpenEnv Email Triage
-emoji: "\ud83d\udce7"
-colorFrom: blue
-colorTo: green
-sdk: docker
-app_file: inference.py
-pinned: false
----
+# openenv-email
 
-# OpenEnv Email Triage
-
-A Hugging Face Space for OpenEnv email triage using FastAPI and rule-based logic.
+A Hugging Face Space using FastAPI for OpenEnv email triage tasks.
 
 ## Features
 - `/reset` endpoint for OpenEnv validation
-- `/run_task/{task}` endpoint for easy, medium, and hard tasks
-- Structured logging for OpenEnv evaluation
-- Dockerized for Hugging Face Spaces
+- Rule-based email classification endpoints for easy, medium, and hard tasks
+- Structured logging for each classification
+- Dockerized for easy deployment
 
 ## Usage
 1. Build the Docker image:
@@ -27,7 +17,13 @@ A Hugging Face Space for OpenEnv email triage using FastAPI and rule-based logic
    ```sh
    docker run -p 7860:7860 openenv-email
    ```
-3. Access the API at `http://localhost:7860/reset` and `/run_task/{task}`
+3. Access the API at `http://localhost:7860/reset` (and other endpoints)
+
+## Endpoints
+- `POST /reset`: Health check for OpenEnv
+- `POST /classify/easy`: Spam detection
+- `POST /classify/medium`: Category detection
+- `POST /classify/hard`: Priority and action detection
 
 ## Requirements
 - Python 3.10+
