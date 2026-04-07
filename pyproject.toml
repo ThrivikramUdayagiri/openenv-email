@@ -1,0 +1,13 @@
+[project]
+name = "openenv-email"
+version = "1.0.0"
+description = "Smart Email Triage Environment for OpenEnv"
+authors = [
+    { name = "Thrivikram" }
+]
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "pydantic",
+    "openai"
+]
