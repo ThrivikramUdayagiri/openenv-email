@@ -8,11 +8,13 @@ API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
 MODEL_NAME = os.getenv("MODEL_NAME", "openai/gpt-oss-120b")
 HF_TOKEN = os.getenv("HF_TOKEN")
 
-# Initialize client (even if not used heavily, required by checklist)
-client = OpenAI(
-    base_url=API_BASE_URL,
-    api_key=HF_TOKEN
-)
+# Initialize client safely
+client = None
+if HF_TOKEN:
+    client = OpenAI(
+        base_url=API_BASE_URL,
+        api_key=HF_TOKEN
+    )
 
 # ----------- RULE-BASED LOGIC -----------
 
@@ -57,8 +59,6 @@ def run_task(task_name, action_cls):
 
     for _ in env.task["expected"]:
 
-        # ----------- DECISION LOGIC -----------
-
         if task_name == "easy":
             parsed = classify_easy(obs.email_text)
             action = action_cls(**parsed)
@@ -82,7 +82,6 @@ def run_task(task_name, action_cls):
         if done:
             break
 
-    # Normalize score
     max_score = len(env.task["expected"])
     final_score = total_reward / max_score if max_score > 0 else 0.0
 
