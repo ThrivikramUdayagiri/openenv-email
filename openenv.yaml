@@ -1,0 +1,25 @@
+name: openenv-email
+description: Smart Email Triage Environment for OpenEnv
+version: 1.0.0
+author: Your Name
+license: MIT
+
+tasks:
+  - name: easy
+    description: Classify email as 'spam' or 'not_spam'
+    difficulty: easy
+    observation: email_text (string)
+    action: label (string: 'spam'|'not_spam')
+    reward: +1 correct, -0.5 incorrect, +0.5 bonus for perfect
+  - name: medium
+    description: Classify email as 'work', 'personal', or 'promotions'
+    difficulty: medium
+    observation: email_text (string)
+    action: label (string: 'work'|'personal'|'promotions')
+    reward: +1 correct, -0.5 incorrect, +0.5 bonus for perfect
+  - name: hard
+    description: Assign priority and action
+    difficulty: hard
+    observation: email_text (string)
+    action: priority (string: 'high'|'low'), action (string: 'reply'|'ignore'|'flag')
+    reward: +0.5 for each correct, -0.25 for each incorrect, +0.5 bonus for perfect
