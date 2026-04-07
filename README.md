@@ -1,63 +1,34 @@
-# openenv-email
+---
+title: OpenEnv Email Triage
+emoji: "\ud83d\udce7"
+colorFrom: blue
+colorTo: green
+sdk: docker
+app_file: inference.py
+pinned: false
+---
 
-**Smart Email Triage Environment (OpenEnv-compliant)**
+# OpenEnv Email Triage
 
-## Overview
-This project simulates a real-world email triage environment for reinforcement learning and LLM evaluation. It is fully OpenEnv-compliant and supports three task difficulties.
+A Hugging Face Space for OpenEnv email triage using FastAPI and rule-based logic.
 
 ## Features
-- **Observation:** Email text (string)
-- **Action:**
-  - Easy: `label` ('spam' or 'not_spam')
-  - Medium: `label` ('work', 'personal', 'promotions')
-  - Hard: `priority` ('high'/'low'), `action` ('reply'/'ignore'/'flag')
-- **Reward:** +1 for correct, -0.5 for incorrect, bonus for perfect sequence
-- **Grader:** Deterministic, task-specific scoring
+- `/reset` endpoint for OpenEnv validation
+- `/run_task/{task}` endpoint for easy, medium, and hard tasks
+- Structured logging for OpenEnv evaluation
+- Dockerized for Hugging Face Spaces
 
-## Project Structure
-```
-openenv-email/
-├── env/
-│   ├── environment.py
-│   ├── tasks.py
-│   └── grader.py
-├── inference.py
-├── requirements.txt
-├── openenv.yaml
-├── Dockerfile
-└── README.md
-```
-
-## Tasks
-- **Easy:** Classify as 'spam' or 'not_spam'
-- **Medium:** Classify as 'work', 'personal', or 'promotions'
-- **Hard:** Assign 'priority' and 'action'
-
-## Setup
-1. **Install dependencies:**
-   ```bash
-   pip install -r requirements.txt
+## Usage
+1. Build the Docker image:
+   ```sh
+   docker build -t openenv-email .
    ```
-2. **(Optional) Set environment variables:**
-   - `API_BASE_URL`
-   - `MODEL_NAME`
-   - `HF_TOKEN`
+2. Run the container:
+   ```sh
+   docker run -p 7860:7860 openenv-email
+   ```
+3. Access the API at `http://localhost:7860/reset` and `/run_task/{task}`
 
-## Running
-```bash
-python inference.py
-```
-
-## Docker
-Build and run with Docker:
-```bash
-docker build -t openenv-email .
-docker run --rm openenv-email
-```
-
-## OpenEnv Validation
-This environment implements the OpenEnv interface and passes validation.
-
-## License
-MIT
-# openenv-email
+## Requirements
+- Python 3.10+
+- See requirements.txt

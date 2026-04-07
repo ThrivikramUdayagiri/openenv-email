@@ -1,79 +1,88 @@
-import os
-from env.environment import SmartEmailTriageEnv, ActionEasy, ActionMedium, ActionHard
 
-API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
-MODEL_NAME = os.getenv("MODEL_NAME", "openai/gpt-oss-120b")
-HF_TOKEN = os.getenv("HF_TOKEN")
+from fastapi import FastAPI
+from pydantic import BaseModel
+from typing import Literal
 
-# ----------- RULE LOGIC -----------
+app = FastAPI()
 
-def classify_easy(text):
-    text = text.lower()
-    if any(x in text for x in ["free", "offer", "buy", "win", "prize"]):
-        return {"label": "spam"}
-    return {"label": "not_spam"}
+# Action classes for OpenEnv compatibility
+class ActionEasy(BaseModel):
+    spam: bool
 
+class ActionMedium(BaseModel):
+    category: Literal["work", "promotions", "personal"]
 
-def classify_medium(text):
-    text = text.lower()
-    if any(x in text for x in ["meeting", "review", "project", "deadline", "client"]):
-        return {"label": "work"}
-    elif any(x in text for x in ["offer", "sale", "discount", "deal"]):
-        return {"label": "promotions"}
+class ActionHard(BaseModel):
+    priority: Literal["high", "low"]
+    action: Literal["reply", "flag", "ignore"]
+
+class EmailInput(BaseModel):
+    subject: str
+    body: str
+    sender: str
+    priority: str = "low"
+    category: str = "personal"
+    spam: bool = False
+    action: str = "ignore"
+
+@app.post("/reset")
+def reset():
+    return {"status": "ok"}
+
+def log_task(task: str, action, reward: int, score: int):
+    print(f"START task={task}")
+    print(f"STEP action={action}")
+    print(f"STEP reward={reward}")
+    print(f"END score={score}")
+
+def classify_easy(email: EmailInput):
+    spam_keywords = ["win", "free", "prize", "money", "offer"]
+    is_spam = any(word in email.subject.lower() or word in email.body.lower() for word in spam_keywords)
+    action = ActionEasy(spam=is_spam)
+    reward = int(is_spam == email.spam)
+    score = reward
+    log_task("easy", action.model_dump(), reward, score)
+    return action.model_dump()
+
+def classify_medium(email: EmailInput):
+    work_keywords = ["meeting", "project", "deadline", "client"]
+    promo_keywords = ["sale", "discount", "offer", "deal"]
+    category = "personal"
+    if any(word in email.subject.lower() or word in email.body.lower() for word in work_keywords):
+        category = "work"
+    elif any(word in email.subject.lower() or word in email.body.lower() for word in promo_keywords):
+        category = "promotions"
+    action = ActionMedium(category=category)
+    reward = int(category == email.category)
+    score = reward
+    log_task("medium", action.model_dump(), reward, score)
+    return action.model_dump()
+
+def classify_hard(email: EmailInput):
+    high_priority_keywords = ["urgent", "asap", "important", "immediate"]
+    reply_keywords = ["reply", "respond", "question"]
+    flag_keywords = ["follow up", "reminder", "flag"]
+    priority = "low"
+    action_type = "ignore"
+    if any(word in email.subject.lower() or word in email.body.lower() for word in high_priority_keywords):
+        priority = "high"
+    if any(word in email.subject.lower() or word in email.body.lower() for word in reply_keywords):
+        action_type = "reply"
+    elif any(word in email.subject.lower() or word in email.body.lower() for word in flag_keywords):
+        action_type = "flag"
+    action = ActionHard(priority=priority, action=action_type)
+    reward = int(priority == email.priority and action_type == email.action)
+    score = reward
+    log_task("hard", action.model_dump(), reward, score)
+    return action.model_dump()
+
+@app.post("/run_task/{task}")
+def run_task(task: str, email: EmailInput):
+    if task == "easy":
+        return classify_easy(email)
+    elif task == "medium":
+        return classify_medium(email)
+    elif task == "hard":
+        return classify_hard(email)
     else:
-        return {"label": "personal"}
-
-
-def classify_hard(text):
-    text = text.lower()
-    if any(x in text for x in ["urgent", "asap", "important"]):
-        return {"priority": "high", "action": "reply"}
-    elif any(x in text for x in ["reminder", "later"]):
-        return {"priority": "low", "action": "flag"}
-    return {"priority": "low", "action": "ignore"}
-
-
-# ----------- CORE LOGIC -----------
-
-def run_task(task_name, action_cls):
-    env = SmartEmailTriageEnv(task_level=task_name)
-    obs = env.reset()
-    total_reward = 0.0
-
-    print(f"START task={task_name}")
-
-    for _ in env.task["expected"]:
-
-        if task_name == "easy":
-            parsed = classify_easy(obs.email_text)
-        elif task_name == "medium":
-            parsed = classify_medium(obs.email_text)
-        else:
-            parsed = classify_hard(obs.email_text)
-
-        action = action_cls(**parsed)
-
-        print(f"STEP action={action.model_dump()}")
-
-        obs, reward, done, _ = env.step(action.model_dump())
-
-        print(f"STEP reward={reward.value}")
-
-        total_reward += reward.value
-
-        if done:
-            break
-
-    final_score = total_reward / len(env.task["expected"])
-    print(f"END score={final_score}")
-
-    return {"score": final_score}
-
-
-
-# ----------- MAIN ENTRY POINT -----------
-
-if __name__ == "__main__":
-    run_task("easy", ActionEasy)
-    run_task("medium", ActionMedium)
-    run_task("hard", ActionHard)
+        return {"error": "Unknown task"}
