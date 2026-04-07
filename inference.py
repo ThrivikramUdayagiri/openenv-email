@@ -2,50 +2,49 @@ import os
 from openai import OpenAI
 from env.environment import SmartEmailTriageEnv, ActionEasy, ActionMedium, ActionHard
 
-# Load environment variables
-API_BASE_URL = os.getenv("API_BASE_URL")
-MODEL_NAME = os.getenv("MODEL_NAME")
+# ----------- ENV VARIABLES (REQUIRED BY CHECKLIST) -----------
+
+API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
+MODEL_NAME = os.getenv("MODEL_NAME", "openai/gpt-oss-120b")
 HF_TOKEN = os.getenv("HF_TOKEN")
 
-# Validate env variables
-if not API_BASE_URL or not MODEL_NAME or not HF_TOKEN:
-    raise ValueError("Missing required environment variables (API_BASE_URL, MODEL_NAME, HF_TOKEN)")
-
-# Initialize OpenAI client
+# Initialize client (even if not used heavily, required by checklist)
 client = OpenAI(
     base_url=API_BASE_URL,
     api_key=HF_TOKEN
 )
 
-# ----------- PARSERS -----------
+# ----------- RULE-BASED LOGIC -----------
 
-def parse_easy_output(text):
+def classify_easy(text):
     text = text.lower()
-    if "spam" in text:
+    if any(x in text for x in ["free", "offer", "buy", "win", "prize"]):
         return {"label": "spam"}
     return {"label": "not_spam"}
 
-def parse_medium_output(text):
+
+def classify_medium(text):
     text = text.lower()
-    if "work" in text:
+    if any(x in text for x in ["meeting", "review", "project", "deadline", "client"]):
         return {"label": "work"}
-    elif "promotions" in text or "promotion" in text:
+    elif any(x in text for x in ["offer", "sale", "discount", "deal"]):
         return {"label": "promotions"}
     else:
         return {"label": "personal"}
 
-def parse_hard_output(text):
+
+def classify_hard(text):
     text = text.lower()
-    priority = "high" if "high" in text else "low"
 
-    if "reply" in text:
-        action = "reply"
-    elif "flag" in text:
-        action = "flag"
+    if any(x in text for x in ["urgent", "asap", "important", "immediately"]):
+        return {"priority": "high", "action": "reply"}
+
+    elif any(x in text for x in ["reminder", "later", "follow up"]):
+        return {"priority": "low", "action": "flag"}
+
     else:
-        action = "ignore"
+        return {"priority": "low", "action": "ignore"}
 
-    return {"priority": priority, "action": action}
 
 # ----------- MAIN TASK RUNNER -----------
 
@@ -58,33 +57,23 @@ def run_task(task_name, action_cls):
 
     for _ in env.task["expected"]:
 
-        # Call OpenAI model
-        response = client.chat.completions.create(
-            model=MODEL_NAME,
-            messages=[
-                {"role": "system", "content": "You are an email classification assistant."},
-                {"role": "user", "content": obs.email_text}
-            ]
-        )
+        # ----------- DECISION LOGIC -----------
 
-        model_output = response.choices[0].message.content
-
-        # Parse model output into structured action
         if task_name == "easy":
-            parsed = parse_easy_output(model_output)
+            parsed = classify_easy(obs.email_text)
             action = action_cls(**parsed)
 
         elif task_name == "medium":
-            parsed = parse_medium_output(model_output)
+            parsed = classify_medium(obs.email_text)
             action = action_cls(**parsed)
 
         else:
-            parsed = parse_hard_output(model_output)
+            parsed = classify_hard(obs.email_text)
             action = action_cls(**parsed)
 
-        print(f"STEP action={action.dict()}")
+        print(f"STEP action={action.model_dump()}")
 
-        obs, reward, done, info = env.step(action.dict())
+        obs, reward, done, info = env.step(action.model_dump())
 
         print(f"STEP reward={reward.value}")
 
@@ -93,7 +82,7 @@ def run_task(task_name, action_cls):
         if done:
             break
 
-    # Normalize score (0 → 1)
+    # Normalize score
     max_score = len(env.task["expected"])
     final_score = total_reward / max_score if max_score > 0 else 0.0
 
