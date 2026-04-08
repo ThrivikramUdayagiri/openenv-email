@@ -5,9 +5,14 @@ description = "Smart Email Triage Environment for OpenEnv"
 authors = [
     { name = "Thrivikram" }
 ]
+
 dependencies = [
     "fastapi",
     "uvicorn",
     "pydantic",
-    "openai"
+    "openai",
+    "openenv>=0.2.0"
 ]
+
+[project.scripts]
+server = "app:app"
