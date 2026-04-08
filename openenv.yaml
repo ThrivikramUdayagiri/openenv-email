@@ -34,3 +34,4 @@ tasks:
       correct: 0.5
       incorrect: -0.25
       bonus: 0.5
+      bonus: 0.5
